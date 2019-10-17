@@ -22,3 +22,6 @@
 	path = boom
 	url = https://github.com/ucb-bar/riscv-boom.git
 	ignore = dirty
+[submodule "vagrant-firechip"]
+	path = vagrant-firechip
+	url = https://github.com/l-nic/vagrant-firechip.git
