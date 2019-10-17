@@ -1,18 +1,24 @@
 [submodule "rocket-chip"]
 	path = rocket-chip
 	url = https://github.com/ucb-bar/rocket-chip.git
+	ignore = dirty
 [submodule "testchipip"]
 	path = testchipip
 	url = https://github.com/ucb-bar/testchipip.git
+	ignore = dirty
 [submodule "icenet"]
 	path = icenet
 	url = https://github.com/firesim/icenet.git
+	ignore = dirty
 [submodule "sifive-blocks"]
 	path = sifive-blocks
 	url = https://github.com/sifive/sifive-blocks.git
+	ignore = dirty
 [submodule "riscv-tools"]
 	path = riscv-tools
 	url = https://github.com/firesim/riscv-tools.git
+	ignore = dirty
 [submodule "boom"]
 	path = boom
 	url = https://github.com/ucb-bar/riscv-boom.git
+	ignore = dirty
