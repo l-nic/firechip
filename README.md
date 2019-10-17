@@ -1,3 +1,19 @@
+# Lightning NIC Project Repository
+
+The original firechip README is included below at the heading "RISC-V Project
+Template".
+
+All lightning NIC project code is stored in the lnic-dev directory within
+this repository. This should allow us to keep the original versions of the
+riscv compiler/debugger/simulator etc. and cleanly separate our
+own work.
+
+The vagrant-firechip submodule contains config scripts intended to be
+run on the host machine, not within the development VM.
+
+Setup instructions: See the README within vagrant-firechip. It is
+not necessary to manually clone the firechip repository.
+
 # RISC-V Project Template
 
 This is a starter template for your custom RISC-V project. It will allow you

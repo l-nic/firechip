@@ -25,3 +25,21 @@
 [submodule "vagrant-firechip"]
 	path = vagrant-firechip
 	url = https://github.com/l-nic/vagrant-firechip.git
+[submodule "lnic-dev/riscv-isa-sim"]
+	path = lnic-dev/riscv-isa-sim
+	url = https://github.com/l-nic/riscv-isa-sim.git
+[submodule "lnic-dev/riscv-pk"]
+	path = lnic-dev/riscv-pk
+	url = https://github.com/riscv/riscv-pk.git
+	ignore = dirty
+[submodule "lnic-dev/riscv-opcodes"]
+	path = lnic-dev/riscv-opcodes
+	url = https://github.com/l-nic/riscv-opcodes.git
+[submodule "lnic-dev/riscv-openocd"]
+	path = lnic-dev/riscv-openocd
+	url = https://github.com/riscv/riscv-openocd.git
+	ignore = dirty
+[submodule "lnic-dev/riscv-tests"]
+	path = lnic-dev/riscv-tests
+	url = https://github.com/riscv/riscv-tests.git
+	ignore = dirty
