@@ -43,3 +43,6 @@
 	path = lnic-dev/riscv-tests
 	url = https://github.com/riscv/riscv-tests.git
 	ignore = dirty
+[submodule "lnic-dev/riscv-binutils-gdb"]
+	path = lnic-dev/riscv-binutils-gdb
+	url = https://github.com/l-nic/riscv-binutils-gdb.git

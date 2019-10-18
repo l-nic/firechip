@@ -29,6 +29,8 @@ RVTEST_CODE_BEGIN
   li x5, 192 # This will be our "fifo head register"
   # We'll also reserve X6 to be the tail register
   la x10, testdata # The address of the weights
+  nicread x12, x13, x14
+  nicwrite x15, x16, x17
   jal zero, condition
 loop:
   mv x8, x5 # Read the fifo head into x8
