@@ -1,0 +1,8 @@
+riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -I./env/p -I./macros/scalar -E rv64ui/neural_net_inference.S | riscv64-unknown-elf-as -march=rv64g -mabi=lp64 -I./env/p -I./macros/scalar - -o custom_neural_net_inference.o
+riscv64-unknown-elf-ld -T./env/p/link.ld -o custom_neural_net_inference.riscv custom_neural_net_inference.o
+
+riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -I./env/p -I./macros/scalar -E rv64ui/neural_net_inference.S | /home/vagrant/binutils-gdb/build/gas/as-new -march=rv64g -mabi=lp64 -I./env/p -I./macros/scalar - -o custom_neural_net_inference.o
+
+Binutils compilation: ../configure --target=riscv64-unknown-elf --prefix=$RISCV
+
+Make sure this specifies riscv somehow when being build. (Look at toolchain config.)
