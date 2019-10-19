@@ -46,3 +46,7 @@
 [submodule "lnic-dev/riscv-binutils-gdb"]
 	path = lnic-dev/riscv-binutils-gdb
 	url = https://github.com/l-nic/riscv-binutils-gdb.git
+[submodule "lnic-dev/binutils-gdb"]
+	path = lnic-dev/binutils-gdb
+	url = https://github.com/l-nic/binutils-gdb.git
+
