@@ -32,14 +32,23 @@ int main() {
 	if (client_socket < 0) {
 		return -1;
 	}
-	uint8_t buffer[8];
-	memcpy(buffer, "abcdefg", 8);
-	write(client_socket, buffer, 8);
-	read(client_socket, buffer, 8);
-	for (int i = 0; i < 8; i++) {
-		cout << buffer[i] << ", ";
+	uint64_t buffer;
+	while (true) {
+		read(client_socket, &buffer, sizeof(buffer));
+		cout << buffer << endl;
 	}
-	cout << endl;
+//	uint8_t buffer[8];
+//	uint64_t to_send = 144;
+//	memcpy(buffer, &to_send, 8);
+//	write(client_socket, buffer, 8);
+//	read(client_socket, buffer, 8);
+//	uint64_t to_receive;
+//	memcpy(&to_receive, buffer, 8);
+//	cout << to_receive << endl;
+//	for (int i = 0; i < 8; i++) {
+//		cout << buffer[i] << ", ";
+//	}
+//	cout << endl;
 	close(client_socket);
 	return 0;
 }

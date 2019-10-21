@@ -32,7 +32,7 @@ RVTEST_CODE_BEGIN
   li x12, 192
   nicwrite x0, x12, x0
   nicread x15, x0, x0
-  li x19, 192
+  li x19, 144
   bne x15, x19, fail
 #   jal zero, condition
 # loop:
