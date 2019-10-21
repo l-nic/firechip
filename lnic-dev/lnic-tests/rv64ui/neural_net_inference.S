@@ -23,31 +23,34 @@
 
 RVTEST_RV64U
 RVTEST_CODE_BEGIN
-  li x1, 0 # X1 wil be counter, start at 0
-  li x2, 8 # X2 will be num_edges. Yes, this is a waste of a register.
-  li x3, 0 # X3 will be accum
-  li x5, 192 # This will be our "fifo head register"
-  # We'll also reserve X6 to be the tail register
-  la x10, testdata # The address of the weights
-  nicread x12, x13, x14
-  nicwrite x15, x16, x17
-  jal zero, condition
-loop:
-  mv x8, x5 # Read the fifo head into x8
-  lw x9, 0(x10) # Load the current weight
-  # TODO: This is making all sorts of assumptions about the order in which bytes arrive
-  # TODO: We should look into floats, as well
-  mul x8, x8, x9
-  add x3, x3, x8
-  addi x10, x10, 4 #Go to the next weight in the array
+  # li x1, 0 # X1 wil be counter, start at 0
+  # li x2, 8 # X2 will be num_edges. Yes, this is a waste of a register.
+  # li x3, 0 # X3 will be accum
+  # li x5, 192 # This will be our "fifo head register"
+  # # We'll also reserve X6 to be the tail register
+  # la x10, testdata # The address of the weights
+  li x12, 192
+  nicwrite x0, x12, x0
+  nicread x15, x0, x0
+  li x19, 192
+  bne x15, x19, fail
+#   jal zero, condition
+# loop:
+#   mv x8, x5 # Read the fifo head into x8
+#   lw x9, 0(x10) # Load the current weight
+#   # TODO: This is making all sorts of assumptions about the order in which bytes arrive
+#   # TODO: We should look into floats, as well
+#   mul x8, x8, x9
+#   add x3, x3, x8
+#   addi x10, x10, 4 #Go to the next weight in the array
 
-  addi x1, x1, 1
-condition:
-  blt x1, x2, loop
-  mv x6, x3
+#   addi x1, x1, 1
+# condition:
+#   blt x1, x2, loop
+#   mv x6, x3
 
-  li x4, 5376 # X4 will hold the correct result
-  bne x6, x4, fail
+#   li x4, 5376 # X4 will hold the correct result
+#   bne x6, x4, fail
 
   RVTEST_PASS
 fail:
