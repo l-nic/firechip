@@ -1,0 +1,20 @@
+To test the lnic register read/write interface:
+
+1. Build and run the switch server:
+    cd /home/vagrant/firechip/lnic-dev/simple-switch
+    ./build_switch_programs.sh
+    ./simple_switch
+2. In a new terminal, run the switch client:
+    cd /home/vagrant/firechip/lnic-dev/simple-switch
+    ./simple_client
+3. In a new terminal, build and run the register relay test:
+    cd /home/vagrant/firechip/lnic-dev/lnic-tests
+    ./build_tools.sh
+    ./run_custom_test.sh register_relay
+4. In a new terminal, run the register relay initializer test:
+    cd /home/vagrant/firechip/lnic-dev/lnic-tests
+    ./run_custom_test.sh initiate_register_relay
+
+You should see every lnic transmission from each end of the relay mirrored
+by the switch client's standard output.
+
