@@ -102,6 +102,9 @@ const uint64_t MAP_ID = 1; // This is very wasteful reading these id's in all th
 // for a while.
 const uint64_t REDUCE_ID = 2;
 
+// Host id's, not message id's
+const uint64_t ROOT_ID = 1;
+
 // Might want to see how feasible it is to use protobufs here.
 struct Message {
 	uint64_t message_type_id = INVALID_ID;
@@ -109,11 +112,21 @@ struct Message {
 };
 
 struct MapMessage : Message {
-	uint64_t data_a = INVALID_ID;
+	uint64_t max_depth = 3;
+	uint64_t cur_depth = 0;
+	uint64_t src_host_id = INVALID_ID;
 };
 
 struct ReduceMessage : Message {
 
+};
+
+uint64_t glob_map_cnt = 4; // TODO: Get rid of this
+
+struct MessageState {
+	uint64_t response_cnt = 0;
+	uint64_t map_cnt = glob_map_cnt;
+	uint64_t src_host_id = INVALID_ID;
 };
 
 mutex read_lock;
@@ -293,6 +306,10 @@ void flush_write_queue(map<uint64_t, connection_t> id_addr_map) {
 	}
 }
 
+uint64_t get_child_id(uint64_t own_id, uint64_t i) {
+	return (glob_map_cnt * own_id) - (glob_map_cnt - 2) + i;
+}
+
 void run_task(uint64_t own_id, vector<uint64_t> server_ids, map<uint64_t, connection_t> id_addr_map) {
 	this_thread::sleep_for(chrono::milliseconds(3000));
 	for (uint64_t server_id : server_ids) {
@@ -308,25 +325,71 @@ void run_task(uint64_t own_id, vector<uint64_t> server_ids, map<uint64_t, connec
 	// Now that we have all of the grunt work set up, we bascially sit here polling to see if any messages have arrived.
 	// If they have, we'll process them and send them on.
 	// Everything from here on out (in this function) needs to be translated into assembly.
-
+	MessageState state;
+	if (own_id == ROOT_ID) {
+		MapMessage map_message;
+		// Send off the initial map messages if we're the root node
+		for (uint64_t i = 0; i < state.map_cnt; i++) {
+			lnic_write_word(MAP_ID);
+			lnic_write_word(get_child_id(own_id, i));
+			lnic_write_word(map_message.max_depth); // The struct defines the defaults
+			lnic_write_word(map_message.cur_depth);
+			lnic_write_word(own_id);
+		}
+	}
 	while (true) {
 		// Poll lnic until data is ready to read
-		lnic_write_word(MAP_ID);
-		lnic_write_word(own_id == 1 ? 2 : 1);
-		lnic_write_word(192);
-		flush_write_queue(id_addr_map);
 		while (!lnic_ready()) { // This can be a custom asm instruction for now
 			this_thread::sleep_for(chrono::milliseconds(10)); // This can just be a very long loop in asm
 		}
 
 		uint64_t message_type_id = lnic_read_word();
+		uint64_t destination_id = lnic_read_word();
+		if (destination_id != own_id) {
+			cerr << "Destination id " << destination_id << " does not match own id " << own_id << endl;
+		}
 		if (message_type_id == MAP_ID) {
 			// Handle map messages
-			cerr << lnic_read_word() << ", " << lnic_read_word() << endl;
+			uint64_t max_depth = lnic_read_word();
+			uint64_t cur_depth = lnic_read_word();
+			if (cur_depth == max_depth - 1) {
+				// Starting reduce phase
+				cerr << "Node " << own_id << " starting reduce phase." << endl;
+				lnic_write_word(REDUCE_ID);
+				lnic_write_word(lnic_read_word()); // Send a response to the same host that sent this message
+
+				// Send the reduce message
+			} else {
+				state.src_host_id = lnic_read_word();
+				// For now, we'll always have four child boards
+				for (uint64_t i = 0; i < state.map_cnt; i++) {
+					// Send additional map messages
+					lnic_write_word(MAP_ID);
+					lnic_write_word(get_child_id(own_id, i));
+					lnic_write_word(max_depth);
+					lnic_write_word(cur_depth + 1);
+					lnic_write_word(own_id);
+				}
+			}
 		} else if (message_type_id == REDUCE_ID) {
 			// Handle reduce messages
+			cerr << "Handling reduce message." << endl;
+			state.response_cnt++;
+			if (state.response_cnt == state.map_cnt) {
+				// Send another reduce message if we have all of them gathered.
+				if (state.src_host_id != INVALID_ID) {
+					lnic_write_word(REDUCE_ID);
+					lnic_write_word(state.src_host_id);
+				} else {
+					// Top level node, no need to send another reduce.
+					cerr << "Top level node received last reduce message." << endl;
+				}
+				break;
+			}
+
 		} else {
 			// Throw an error. Asm -- jump to test failure.
+			cerr << "Unrecognized message type id " << message_type_id << endl;
 		}
 		break;
 
