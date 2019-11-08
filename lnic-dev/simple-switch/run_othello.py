@@ -18,11 +18,12 @@ def main():
 	parser.add_argument("--use-riscv", type=bool, help="Use the riscv simulator instead of the C++ node", default=False)
 
 	args = parser.parse_args()
+	use_riscv = args.use_riscv
 	node_queue = Queue.Queue()
 	node_queue.put(Node(1, []))
 	node_list = []
 
-	if args.use_riscv:
+	if use_riscv:
 		# Compile the riscv othello C program to assembly
 		os.system("riscv64-unknown-elf-gcc -S -fverbose-asm riscv_othello_node.c")
 
@@ -60,7 +61,7 @@ def main():
 	log_files = []
 	subprocs = []
 	for node in node_list:
-		if args.use_riscv:
+		if not use_riscv:
 			node_command = "./othello_node " + str(node.own_id)
 			for neighbor in node.neighbor_ids:
 				node_command += " " + str(neighbor)
@@ -70,15 +71,15 @@ def main():
 			for neighbor in node.neighbor_ids:
 				node_command += str(neighbor) + ","
 			node_command = node_command[:-1]
-			node_command += " pk riscv_othello_node.riscv "
+			node_command += " /home/vagrant/firechip/lnic-dev/riscv-pk/build/pk riscv_othello_node.riscv "
 			node_command += str(node.own_id)
 		log_file = open("logs/othello_log_" + str(node.own_id) + ".txt", "w")
 		log_files.append(log_file)
 
 		print node_command
 		args = shlex.split(node_command)
-		# p = subprocess.Popen(args, stdout=log_file, stderr=log_file)
-		# subprocs.append(p)
+		p = subprocess.Popen(args, stdout=log_file, stderr=log_file)
+		subprocs.append(p)
 
 	time.sleep(10)
 	for i in range(len(log_files)):

@@ -30,8 +30,7 @@
 	url = https://github.com/l-nic/riscv-isa-sim.git
 [submodule "lnic-dev/riscv-pk"]
 	path = lnic-dev/riscv-pk
-	url = https://github.com/riscv/riscv-pk.git
-	ignore = dirty
+	url = https://github.com/l-nic/riscv-pk.git
 [submodule "lnic-dev/riscv-opcodes"]
 	path = lnic-dev/riscv-opcodes
 	url = https://github.com/l-nic/riscv-opcodes.git

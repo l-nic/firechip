@@ -69,19 +69,13 @@ static inline uint64_t get_child_id(uint64_t own_id, uint64_t i) {
 	return (BRANCHING_FACTOR * own_id) - (BRANCHING_FACTOR - 2) + i;
 }
 
-int main(int argc, char ** argv) {
-	printf("Starting\n");
-	if (argc != 2) {
-		return ARGUMENT_ERROR;
-	}
-	uint64_t own_id = strtoul(argv[1], NULL, 0);
+int run_othello(uint64_t own_id) {
 	uint64_t response_cnt = 0;
 	uint64_t map_cnt = BRANCHING_FACTOR;
 	uint64_t src_host_id = INVALID_ID;
 
 	// Begin assembly core. Global state consists of response_cnt,
 	// map_cnt, src_host_id, own_id
-	lnic_set_enable(true);
 	if (own_id == ROOT_ID) {
 		// Send off the initial map messages if we're the root node
 		for (uint64_t i = 0; i < map_cnt; i++) {
@@ -94,11 +88,9 @@ int main(int argc, char ** argv) {
 	}
 	while (true) {
 		// Poll lnic until data is ready to read
-		// printf("")
 		while (!lnic_ready()) { // This can be a custom asm instruction for now
 
 		}
-
 		uint64_t message_type_id = lnic_read_word();
 		uint64_t destination_id = lnic_read_word();
 		if (destination_id != own_id) {
@@ -112,9 +104,12 @@ int main(int argc, char ** argv) {
 				// Starting reduce phase
 				lnic_write_word(REDUCE_ID);
 				lnic_write_word(lnic_read_word()); // Send a response to the same host that sent this message
+				printf("Sending reduce message\n");
 				return 0;
 				// Send the reduce message
 			} else {
+				lnic_set_enable(false);
+				lnic_set_enable(true);
 				src_host_id = lnic_read_word();
 				// For now, we'll always have four child boards
 				for (uint64_t i = 0; i < map_cnt; i++) {
@@ -134,8 +129,11 @@ int main(int argc, char ** argv) {
 				if (src_host_id != INVALID_ID) {
 					lnic_write_word(REDUCE_ID);
 					lnic_write_word(src_host_id);
+					printf("Reduce continuing\n");
+					return 0;
 				} else {
 					// Top level node, no need to send another reduce.
+					printf("Reduce reached top level\n");
 					return 0;
 				}
 			}
@@ -146,4 +144,17 @@ int main(int argc, char ** argv) {
 		}
 	}
 	return 0;
+}
+
+int main(int argc, char ** argv) {
+	printf("Starting riscv othello node\n");
+	if (argc != 2) {
+		return ARGUMENT_ERROR;
+	}
+	uint64_t own_id = strtoul(argv[1], NULL, 0);
+	lnic_set_enable(true); // TODO: Verify that these are even
+	// needed if the trap state restore is removed
+	int retval = run_othello(own_id);
+	lnic_set_enable(false);
+	return retval;
 }
