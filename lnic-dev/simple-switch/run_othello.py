@@ -1,6 +1,6 @@
 # Build a list of id's and ports sufficient to run the othello sim
 # Also launch nodes to actually execute the sim
-import argparse, Queue, os
+import argparse, Queue, subprocess, shlex, time
 
 class Node:
 	def __init__(self, own_id, neighbor_ids):
@@ -44,12 +44,23 @@ def main():
 	id_file.close()
 
 	# Launch the nodes
+	log_files = []
+	subprocs = []
 	for node in node_list:
 		node_command = "./othello_node " + str(node.own_id)
+		log_file = open("logs/othello_log_" + str(node.own_id) + ".txt", "w")
+		log_files.append(log_file)
 		for neighbor in node.neighbor_ids:
 			node_command += " " + str(neighbor)
 		print node_command
-		# os.system(node_command)
+		args = shlex.split(node_command)
+		p = subprocess.Popen(args, stdout=log_file, stderr=log_file)
+		subprocs.append(p)
+
+	time.sleep(10)
+	for i in range(len(log_files)):
+		log_files[i].close()
+		subprocs[i].kill()
 
 
 if __name__ == "__main__":

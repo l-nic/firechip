@@ -185,6 +185,9 @@ map<uint64_t, connection_t> get_id_addr_map() {
 	bool first_line = true;
 	map<uint64_t, connection_t> id_addr_map;
 	while (getline(id_addr_file, line)) {
+		if (line.empty()) {
+			continue;
+		}
 		if (first_line) {
 			first_line = false;
 			continue;
@@ -310,7 +313,7 @@ uint64_t get_child_id(uint64_t own_id, uint64_t i) {
 	return (glob_map_cnt * own_id) - (glob_map_cnt - 2) + i;
 }
 
-void run_task(uint64_t own_id, vector<uint64_t> server_ids, map<uint64_t, connection_t> id_addr_map) {
+void run_task(uint64_t own_id, vector<uint64_t> server_ids, map<uint64_t, connection_t> id_addr_map, int server_socket) {
 	this_thread::sleep_for(chrono::milliseconds(3000));
 	for (uint64_t server_id : server_ids) {
 		// Connect to each listed server id
@@ -333,10 +336,12 @@ void run_task(uint64_t own_id, vector<uint64_t> server_ids, map<uint64_t, connec
 			lnic_write_word(MAP_ID);
 			lnic_write_word(get_child_id(own_id, i));
 			lnic_write_word(map_message.max_depth); // The struct defines the defaults
-			lnic_write_word(map_message.cur_depth);
+			lnic_write_word(map_message.cur_depth + 1);
 			lnic_write_word(own_id);
 		}
+		flush_write_queue(id_addr_map);
 	}
+	bool done = false;
 	while (true) {
 		// Poll lnic until data is ready to read
 		while (!lnic_ready()) { // This can be a custom asm instruction for now
@@ -357,7 +362,7 @@ void run_task(uint64_t own_id, vector<uint64_t> server_ids, map<uint64_t, connec
 				cerr << "Node " << own_id << " starting reduce phase." << endl;
 				lnic_write_word(REDUCE_ID);
 				lnic_write_word(lnic_read_word()); // Send a response to the same host that sent this message
-
+				done = true;
 				// Send the reduce message
 			} else {
 				state.src_host_id = lnic_read_word();
@@ -384,19 +389,21 @@ void run_task(uint64_t own_id, vector<uint64_t> server_ids, map<uint64_t, connec
 					// Top level node, no need to send another reduce.
 					cerr << "Top level node received last reduce message." << endl;
 				}
-				break;
+				done = true;
 			}
 
 		} else {
 			// Throw an error. Asm -- jump to test failure.
 			cerr << "Unrecognized message type id " << message_type_id << endl;
 		}
-		break;
-
 		flush_write_queue(id_addr_map); // Don't translate to asm, this will be handled by hardware
 		// In the simulator, we might have to get rid of the write queue and just write out
 		// each message immediately as it's built.
+		if (done) {
+			break;
+		}
 	}
+	close(server_socket);
 }
 
 int main(int argc, char** argv) {
@@ -418,8 +425,8 @@ int main(int argc, char** argv) {
 	if (server_socket < 0) {
 		return -1;
 	}
-	all_threads.push_back(move(thread([own_id, server_ids, id_addr_map] () {
-		run_task(own_id, server_ids, id_addr_map);
+	all_threads.push_back(move(thread([own_id, server_ids, id_addr_map, server_socket] () {
+		run_task(own_id, server_ids, id_addr_map, server_socket);
 	})));
 	while (true) {
 		struct sockaddr_in addr;
@@ -430,12 +437,12 @@ int main(int argc, char** argv) {
 		if (connectionfd < 0) {
 			cerr << "Server connection accept attempt failed."
 				<< endl;
-			continue;
+			break;
 		}
 		if (addr.sin_family != AF_INET) {
 			cerr << "Server accepted non-internet connection."
 				<< endl;
-			continue;
+			break;
 		}
 		uint16_t port = ntohs(addr.sin_port);
 		char dst_cstring[INET_ADDRSTRLEN + 1];
