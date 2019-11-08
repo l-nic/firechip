@@ -3,3 +3,8 @@ simple_client
 othello_node
 id_addr.txt
 logs/
+a.out
+riscv_othello_node.o
+riscv_othello_node.riscv
+riscv_othello_node.s
+riscv_othello_node
