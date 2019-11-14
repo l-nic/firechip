@@ -25,8 +25,10 @@
 #define FIXED_TYPE 1
 #define VARIABLE_TYPE 2
 #define TERMINATE_TYPE 3
+#define CONFIG_TYPE 4
 
 #define ARGUMENT_ERROR -3
+#define CONFIG_ERROR -4
 
 register volatile uint64_t global_ptr1 asm ("t5");
 register volatile uint64_t global_ptr2 asm ("t6");
@@ -63,7 +65,55 @@ static inline uint64_t lnic_messages_ready() {
 	
 }
 
+// TODO: If we end up with enough random configuration registers,
+// we might want to start serializing some of this data.
+static inline uint64_t lnic_reserve_port(uint64_t port) {
+	// Reserve port if possible, and return it if success
+	// Return the next unused port if failure
+	// The reservation binds this thread's id to the port number
+	// We need something like this so that other applications can send
+	// messages to this one without knowing the thread id in advance
+	// They'll only need to know the port number, which can be pre-defined
+	// for a particular service.
+}
+
+static inline uint64_t lnic_free_port(uint64_t port) {
+
+}
+
+// IPv4 32-bits in lower 32 bits here.
+static inline void lnic_set_dest_ip_lower(uint64_t ip) {
+
+}
+
+// Only used for ipv6.
+static inline void lnic_set_dest_ip_upper(uint64_t ip) {
+
+}
+
+static inline void lnic_set_dest_lnic_port(uint64_t port) {
+
+}
+
+// TODO: We'll eventually need a way to configure the ip's too
+
 int run_loopback() {
+	// Configure our own id and the loopback.
+	lnic_set_own_id(1);
+	while (lnic_messages_ready() == 0);
+	uint64_t message_type = lnic_read_word();
+	if (message_type != CONFIG_TYPE) {
+		return CONFIG_ERROR;
+	}
+	while (!lnic_read_message_end()) {
+		lnic_read_word();
+	}
+	lnic_set_dest_ip_lower(lnic_read_message_ip_lower());
+	lnic_set_dest_port(lnic_read_message_src_port());
+
+	// Receive messages and send back responses. The lnic assumes that each
+	// message type can fit into a single packet, but makes no assumptions beyond that.
+
 	while (true) {
 		while (lnic_messages_ready() == 0) { // We're not ready to use word-count yet, since that requires blocking reads in case the message hasn't fully arrived
 			// Wait for at least one message to be in the queue
