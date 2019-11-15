@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define ARGUMENT_ERROR -1
+
 register volatile uint64_t global_ptr1 asm ("t5");
 register volatile uint64_t global_ptr2 asm ("t6");
 
@@ -22,64 +24,65 @@ uint64_t lnic_get_own_id() {
 
 uint64_t lnic_read_word() {
 	register uint64_t to_return asm("a0");
-	asm("cssrw a0, lread, zero");
+	asm("csrrw a0, lread, zero");
 	return to_return;
 }
 
 uint64_t lnic_messages_ready() {
 	register uint64_t to_return asm("a0");
-	asm("cssrw a0, lmsgsrdy, zero");
+	asm("csrrw a0, lmsgsrdy, zero");
 	return to_return;
 }
 
 uint64_t lnic_is_last_word() {
 	register uint64_t to_return asm("a0");
-	asm("cssrw a0, lrdend, zero");
+	asm("csrrw a0, lrdend, zero");
 	return to_return;
 }
 
 uint64_t lnic_src_ip_lower() {
 	register uint64_t to_return asm("a0");
-	asm("cssrw a0, lrdsrciplo, zero");
+	asm("csrrw a0, lrdsrciplo, zero");
 	return to_return;
 }
 
 uint64_t lnic_src_ip_upper() {
 	register uint64_t to_return asm("a0");
-	asm("cssrw a0, lrdsrciphi, zero");
+	asm("csrrw a0, lrdsrciphi, zero");
 	return to_return;
 }
 
 uint64_t lnic_src_port() {
 	register uint64_t to_return asm("a0");
-	asm("cssrw a0, lrdsrcprt, zero");
+	asm("csrrw a0, lrdsrcprt, zero");
 	return to_return;
 }
 
 void lnic_write_word() {
-	asm("cssrw zero, lwrite, a0");
+	asm("csrrw zero, lwrite, a0");
 }
 
 void lnic_write_message_end() {
-	asm("cssrw zero, lwrend, a0");
+	asm("csrrw zero, lwrend, a0");
 }
 
 void lnic_set_dst_ip_lower(uint64_t ip_lower_bits) {
-	asm("cssrw zero, lwrdstiplo, a0");
+	asm("csrrw zero, lwrdstiplo, a0");
 }
 
 void lnic_set_dst_ip_upper(uint64_t ip_upper_bits) {
-	asm("cssrw zero, lwrdstiphi, a0");
+	asm("csrrw zero, lwrdstiphi, a0");
 }
 
 void lnic_set_dst_port(uint64_t dst_port) {
-	asm("cssrw zero, lwrdstprt, a0");
+	asm("csrrw zero, lwrdstprt, a0");
 }
 
 int main(int argc, char ** argv) {
 	if (argc != 1) {
 		return ARGUMENT_ERROR;
 	}
+	printf("Starting trivial loopback\n");
 	lnic_set_enable(true);
 	lnic_set_own_id(1);
 	while (lnic_messages_ready() == 0);

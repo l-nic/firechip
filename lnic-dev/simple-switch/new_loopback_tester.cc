@@ -5,6 +5,9 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace std;
 
@@ -25,7 +28,7 @@ struct header_data_t {
 
 int main() {
 	string real_ip_addr = "127.0.0.1";
-	uint16_t real_udp_port = 9001;
+	uint16_t real_udp_port = 9000; // Destination
 	struct sockaddr_in addr;
 	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	addr.sin_family = AF_INET;
@@ -44,13 +47,17 @@ int main() {
 
 	ConfigMessage message;
 	message.message_type = CONFIG_TYPE;
-	uint64_t buffer_size = sizeof(header_data_t) + sizeof(ConfigMessage);
+	uint64_t buffer_size = sizeof(uint16_t) + sizeof(header_data_t) + sizeof(ConfigMessage);
 	uint8_t* buffer = new uint8_t[buffer_size];
+	*(uint16_t*)buffer = htons(9001); // Reply udp port
+	memcpy(buffer + sizeof(uint16_t), &header, sizeof(header));
+	memcpy(buffer + sizeof(uint16_t) + sizeof(header), &message, sizeof(message));
 	ssize_t bytes_written = sendto(sockfd, buffer, buffer_size, 0, (const struct sockaddr*)&addr, sizeof(addr));
 	delete [] buffer;
 	if (bytes_written <= 0) {
 		printf("Write error sending datagram\n");
 		return -1;
 	}
+	printf("Datagram sent\n");
 	return 0;
 }

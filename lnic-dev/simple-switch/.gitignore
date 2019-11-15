@@ -8,3 +8,8 @@ riscv_othello_node.o
 riscv_othello_node.riscv
 riscv_othello_node.s
 riscv_othello_node
+loopback_prober
+new_loopback_tester
+riscv_trivial_loopback.s
+riscv_trivial_loopback.o
+riscv_trivial_loopback.riscv
