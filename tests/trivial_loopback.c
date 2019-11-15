@@ -94,6 +94,10 @@ struct lnic_header_t {
 	uint64_t dst_port;
 } __attribute__((packed));
 
+struct basic_message_t {
+	uint64_t word;
+} __attribute__((packed));
+
 static int checksum(uint16_t *data, int len)
 {
 	int i;
@@ -245,7 +249,9 @@ static int process_udp(void *buf, uint8_t *mac) {
 	struct udp_header* udp = ((char*)ipv4 + (ihl << 2));
 	uint16_t* reply_port_addr = ((char*)udp + sizeof(*udp));
 	struct lnic_header_t* lnic_header = ((char*)reply_port_addr + sizeof(uint16_t));
-	uint64_t* message_data = ((char*)lnic_header + 3*sizeof(uint64_t));
+	printf("Lnic header size: %d\n", sizeof(struct lnic_header_t));
+	struct basic_message_t* message_data = ((char*)lnic_header + sizeof(struct lnic_header_t));
+	printf("Message data: %#lx, udp header start: %#lx, diff: %d\n", message_data, udp, (char*)message_data - (char*)udp);
 	uint64_t message_size_words = (ntohs(udp->length) - sizeof(*udp) - sizeof(uint16_t) - sizeof(*lnic_header)) / sizeof(uint64_t);
 	char src_addr[IP_MAX_STR_LEN];
 	char dst_addr[IP_MAX_STR_LEN];
@@ -258,7 +264,7 @@ static int process_udp(void *buf, uint8_t *mac) {
 	printf("LNIC message length in words: %d\n", message_size_words);
 	printf("LNIC message data by word:\n");
 	for (size_t i = 0; i < message_size_words; i++) {
-		printf("    %d: 0x%#lx\n", i, *message_data);
+		printf("    %d: 0x%#lx\n", i, message_data[i]);
 	}
 	printf("END OF MESSAGE--------------------\n\n");
 
