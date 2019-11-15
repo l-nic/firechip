@@ -294,12 +294,12 @@ static int process_udp(void *buf, uint8_t *mac) {
 	ipv4->cksum = htons(checksum((uint16_t *) ipv4, ihl << 1));
 
 	// Set the UDP header fields that need to change
-	udp->src_port = 0;
+	udp->src_port = htons(9000);
 	udp->dst_port = *reply_port_addr;
 	udp->checksum = 0;
 
 	// Set the new reply port
-	*reply_port_addr = 0;
+	*reply_port_addr = htons(9000);
 
 	ssize_t size = ntohs(ipv4->length) + ETH_HEADER_SIZE;
 
