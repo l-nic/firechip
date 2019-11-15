@@ -92,9 +92,11 @@ int main(int argc, char ** argv) {
 	lnic_write_word(input_data + 1);
 	lnic_write_message_end();
 	while (true) {
+		// Start of profile
 		while (lnic_messages_ready() == 0);
 		lnic_write_word(lnic_read_word() + 1);
 		lnic_write_message_end();
+		// End of profile
 	}
 	lnic_set_enable(false);
 	return 0;

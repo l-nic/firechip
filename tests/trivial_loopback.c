@@ -23,6 +23,7 @@
 
 #define UDP_PROT 17
 #define IP_MAX_STR_LEN 16
+#define ICMP_DESTINATION_UNREACHABLE 3
 
 static inline uint16_t ntohs(uint16_t nint)
 {
@@ -193,6 +194,10 @@ static int process_icmp(void *buf, uint8_t *mac) {
 	icmp = (buf + sizeof(*eth) + (ihl << 2));
 
 	if (icmp->type != ECHO_REQUEST) {
+		if (icmp->code == ICMP_DESTINATION_UNREACHABLE) {
+			printf("Destination host unreachable\n");
+			return 0;
+		}
 		printf("Wrong ICMP type %d\n", icmp->type);
 		return -1;
 	}
@@ -233,26 +238,8 @@ static int process_icmp(void *buf, uint8_t *mac) {
 	return 0;
 }
 
-static int process_udp(void *buf, uint8_t *mac) {
+static void print_message(struct ipv4_header* ipv4, struct udp_header* udp, uint16_t* reply_port_addr, struct lnic_header_t* lnic_header, struct basic_message_t* message_data, uint64_t message_size_words) {
 	printf("START OF MESSAGE--------------\n");
-	struct eth_header *eth = buf;
-	// verify IPv4
-	struct ipv4_header* ipv4 = buf + sizeof(*eth);
-	int ihl = ipv4->ver_ihl & 0xf;
-
-	if (checksum((uint16_t *) ipv4, ihl << 1) != 0) {
-		printf("Bad IP header checksum %04x\n", ipv4->cksum);
-		return -1;
-	}
-
-	// verify UDP
-	struct udp_header* udp = ((char*)ipv4 + (ihl << 2));
-	uint16_t* reply_port_addr = ((char*)udp + sizeof(*udp));
-	struct lnic_header_t* lnic_header = ((char*)reply_port_addr + sizeof(uint16_t));
-	printf("Lnic header size: %d\n", sizeof(struct lnic_header_t));
-	struct basic_message_t* message_data = ((char*)lnic_header + sizeof(struct lnic_header_t));
-	printf("Message data: %#lx, udp header start: %#lx, diff: %d\n", message_data, udp, (char*)message_data - (char*)udp);
-	uint64_t message_size_words = (ntohs(udp->length) - sizeof(*udp) - sizeof(uint16_t) - sizeof(*lnic_header)) / sizeof(uint64_t);
 	char src_addr[IP_MAX_STR_LEN];
 	char dst_addr[IP_MAX_STR_LEN];
 	parse_ip_addr(src_addr, ipv4->src_addr);
@@ -264,16 +251,61 @@ static int process_udp(void *buf, uint8_t *mac) {
 	printf("LNIC message length in words: %d\n", message_size_words);
 	printf("LNIC message data by word:\n");
 	for (size_t i = 0; i < message_size_words; i++) {
-		printf("    %d: 0x%#lx\n", i, message_data[i]);
+		printf("    %d: 0x%#lx\n", i, message_data[i].word);
 	}
 	printf("END OF MESSAGE--------------------\n\n");
+}
 
-	// Parse the udp header, the additional udp port routing, and the lnic header, message, and message length
-	// Do some amount of work on the message
-	// Rebuild the headers and send the response.
-	// Profile this with empty messages to get a baseline per-message cycle count.
-	// Then add data to the messages and see how much it goes up by.
-	// Then do the same thing for the lnic implementation (at least for instruction count).
+static int process_udp(void *buf, uint8_t *mac) {
+	struct eth_header *eth = buf;
+	// verify IPv4
+	struct ipv4_header* ipv4 = buf + sizeof(*eth);
+	int ihl = ipv4->ver_ihl & 0xf;
+
+	if (checksum((uint16_t *) ipv4, ihl << 1) != 0) {
+		printf("Bad IP header checksum %04x\n", ipv4->cksum);
+		return -1;
+	}
+
+	// Parse UDP, reply port, LNIC header, message start pointer, and message size
+	struct udp_header* udp = ((char*)ipv4 + (ihl << 2));
+	uint16_t* reply_port_addr = ((char*)udp + sizeof(*udp));
+	struct lnic_header_t* lnic_header = ((char*)reply_port_addr + sizeof(uint16_t));
+	struct basic_message_t* message_data = ((char*)lnic_header + sizeof(struct lnic_header_t));
+	uint64_t message_size_words = (ntohs(udp->length) - sizeof(*udp) - sizeof(uint16_t) - sizeof(*lnic_header)) / sizeof(uint64_t);
+	
+	print_message(ipv4, udp, reply_port_addr, lnic_header, message_data, message_size_words);
+
+	// Set the new message data
+	message_data[0].word++;
+
+	// Build the outer headers to route the packet back
+	// Set the destination and source MACs
+	memcpy(eth->dst_mac, eth->src_mac, MAC_ADDR_SIZE);
+	memcpy(eth->src_mac, mac, MAC_ADDR_SIZE);
+
+	// Swap the source and destination IP addresses
+	uint32_t tmp_addr = ipv4->dst_addr;
+	ipv4->dst_addr = ipv4->src_addr;
+	ipv4->src_addr = tmp_addr;
+
+	// compute the IPv4 header checksum
+	ipv4->cksum = 0;
+	ipv4->cksum = htons(checksum((uint16_t *) ipv4, ihl << 1));
+
+	// Set the UDP header fields that need to change
+	udp->src_port = 0;
+	udp->dst_port = *reply_port_addr;
+	udp->checksum = 0;
+
+	// Set the new reply port
+	*reply_port_addr = 0;
+
+	ssize_t size = ntohs(ipv4->length) + ETH_HEADER_SIZE;
+
+	size = ceil_div(size + NET_IP_ALIGN, 8) * 8;
+
+	nic_send(buf, size);
 	return 0;
 }
 

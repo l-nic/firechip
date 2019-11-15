@@ -85,6 +85,7 @@ int main() {
 		for (size_t i = 0; i < num_words; i++) {
 			printf("Word %d: %#lx\n", i, words[i]);
 		}
+		cerr << endl;
 	}
 	return 0;
 }
