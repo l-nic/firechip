@@ -27,7 +27,7 @@ struct header_data_t {
 } __attribute__((packed));
 
 int main() {
-	string real_ip_addr = "127.0.0.1";
+	string real_ip_addr = "192.168.1.2";
 	uint16_t real_udp_port = 9000; // Destination
 	struct sockaddr_in addr;
 	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -46,7 +46,7 @@ int main() {
 	header.dst_port_id = 1;
 
 	ConfigMessage message;
-	message.message_type = CONFIG_TYPE;
+	message.message_type = 0xabcdef1234567890;
 	uint64_t buffer_size = sizeof(uint16_t) + sizeof(header_data_t) + sizeof(ConfigMessage);
 	uint8_t* buffer = new uint8_t[buffer_size];
 	*(uint16_t*)buffer = htons(9001); // Reply udp port
