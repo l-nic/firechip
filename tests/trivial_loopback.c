@@ -25,6 +25,14 @@
 #define IP_MAX_STR_LEN 16
 #define ICMP_DESTINATION_UNREACHABLE 3
 
+volatile uint64_t cycle_start = 0;
+volatile uint64_t cycle_end = 0;
+volatile uint64_t inst_start = 0;
+volatile uint64_t inst_end = 0;
+#define PROFILE_START asm volatile("rdinstret %0" : "=r"(inst_start)); asm volatile("rdcycle %0" : "=r"(cycle_start));
+#define PROFILE_STOP asm volatile("rdcycle %0" : "=r"(cycle_end)); asm volatile("rdinstret %0" : "=r"(inst_end));
+#define PROFILE_DUMP printf("%u,%u", inst_end - inst_start, cycle_end - cycle_start);
+
 static inline uint16_t ntohs(uint16_t nint)
 {
 	return ((nint & 0xff) << 8) | ((nint >> 8) & 0xff);
@@ -276,8 +284,15 @@ static int process_udp(void *buf, uint8_t *mac) {
 	
 	print_message(ipv4, udp, reply_port_addr, lnic_header, message_data, message_size_words);
 
+	PROFILE_START;
 	// Set the new message data
-	message_data[0].word++;
+	for(uint64_t i = 0; i < message_size_words; i++) {
+		message_data[i].word++;
+	}
+	PROFILE_STOP;
+	printf("COPY,");
+	PROFILE_DUMP;
+	printf("\n");
 
 	// Build the outer headers to route the packet back
 	// Set the destination and source MACs
@@ -305,7 +320,12 @@ static int process_udp(void *buf, uint8_t *mac) {
 
 	size = ceil_div(size + NET_IP_ALIGN, 8) * 8;
 
+	PROFILE_START;
 	nic_send(buf, size);
+	PROFILE_STOP;
+	printf("SEND,");
+	PROFILE_DUMP;
+	printf("\n");
 	return 0;
 }
 

@@ -26,7 +26,11 @@ struct header_data_t {
 	uint64_t dst_port_id;
 } __attribute__((packed));
 
-int main() {
+int main(int argc, char** argv) {
+	if (argc != 2) {
+		printf("Number of words is a required argument.\n");
+		return -1;
+	}
 	string real_ip_addr = "192.168.1.2";
 	uint16_t real_udp_port = 9000; // Destination
 	struct sockaddr_in addr;
@@ -45,15 +49,17 @@ int main() {
 	header.src_port_id = 1;
 	header.dst_port_id = 1;
 
-	ConfigMessage message;
-	message.message_type = 1;
-	uint64_t buffer_size = sizeof(uint16_t) + sizeof(header_data_t) + sizeof(ConfigMessage);
+	uint64_t num_words = atoi(argv[1]);
+	uint64_t* words = new uint64_t[num_words];
+	words[0] = 1;
+	uint64_t buffer_size = sizeof(uint16_t) + sizeof(header_data_t) + num_words*sizeof(uint64_t);
 	uint8_t* buffer = new uint8_t[buffer_size];
-	*(uint16_t*)buffer = htons(9000); // Reply udp port
+	*(uint16_t*)buffer = htons(9001); // Reply udp port
 	memcpy(buffer + sizeof(uint16_t), &header, sizeof(header));
-	memcpy(buffer + sizeof(uint16_t) + sizeof(header), &message, sizeof(message));
+	memcpy(buffer + sizeof(uint16_t) + sizeof(header), words, num_words*sizeof(uint16_t));
 	ssize_t bytes_written = sendto(sockfd, buffer, buffer_size, 0, (const struct sockaddr*)&addr, sizeof(addr));
 	delete [] buffer;
+	delete [] words;
 	if (bytes_written <= 0) {
 		printf("Write error sending datagram\n");
 		return -1;
