@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
 		printf("Number of words is a required argument.\n");
 		return -1;
 	}
+	//string real_ip_addr = "192.168.1.2";
 	string real_ip_addr = "192.168.1.2";
 	uint16_t real_udp_port = 9000; // Destination
 	struct sockaddr_in addr;
