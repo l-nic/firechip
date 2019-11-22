@@ -51,9 +51,10 @@ RVTEST_CODE_BEGIN
 #   If all responses have been received:
 #     Send ReduceMsg with min (or max) value up to parent
 
-othello:
-  # branch if FIFO head == 0 (i.e. is a reduce msg)
-  beq x0, x31, process_reduce_msg
+othello_start:
+  # branch if FIFO head == REDUCE_TYPE (i.e. is a reduce msg)
+  li x5, REDUCE_TYPE
+  beq x5, x31, process_reduce_msg
 process_map_msg:
   # move FIFO head (the board) into the argument reg
   mv x10, x31
@@ -75,6 +76,7 @@ process_map_msg:
   # append minimax value
   mv x30, x10
   li x30, MSG_END
+  jal x0, othello_start # process next message
 send_boards:
   # record msg state
   # save boards and num_boards
@@ -97,7 +99,7 @@ send_boards:
   mv x5, x9 # x5 = counter from num_boards down to 0
 send_map_msg:
   # decrement counter
-  subi x5, x5, 1
+  addi x5, x5, -1
   ld x30, x5(x8) # append board to Tail FIFO
   mv x30, x18 # append max_depth
   addi x30, x19, 1 # append cur_depth + 1
@@ -106,6 +108,7 @@ send_map_msg:
   li x30, MSG_END
   # loop if needed
   bne x0, x5, send_map_msg 
+  jal x0, othello_start # process next message
 process_reduce_msg:
   # discard target_host_id (used for routing, perhaps removed by NIC)
   mv x0, x31
@@ -123,8 +126,8 @@ process_reduce_msg:
   sd x29, 4*64(x5)
 skip:
   # check if all responses have been received
-  bne x6, x7, pass
-  # send ReduceMsg to parent
+  bne x6, x7, othello_start
+  # all responses have been received - send ReduceMsg to parent
   # lookup src_host_id and write to network
   ld x30, 0(x5)
   # lookup src_msg_ptr and write to network
@@ -134,13 +137,12 @@ skip:
   # free MsgState (5*8 bytes)
   li x10, 5*8
   jal x1, free
-  jal x0, pass
+  jal x0, othello_start
 
 compute_boards:
   # TODO: given an initial board, compute new boards
   # store pointer to boards in x10 and num_boards in x11
 
-pass:
   RVTEST_PASS
 fail:
   RVTEST_FAIL

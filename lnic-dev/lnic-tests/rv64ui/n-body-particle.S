@@ -4,7 +4,7 @@
 # n-body-particle.S
 #-----------------------------------------------------------------------------
 #
-# Prototype of the Othello nanoservice application in RISC-V assembly.
+# Prototype of a particle node in the N-body nanoservice application in RISC-V assembly.
 #
 
 #include "riscv_test.h"
